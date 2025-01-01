@@ -17,7 +17,9 @@ class LibraryService:
             raise Exception(f"Failed to add book: {e}")
         
     def grant_book(self, title: str, author: str, isbn: str) -> Book:
-        new_data = [None, title, isbn, author, True, None, None, None, None, None, None, None, True]
+        new_data = [None, title, isbn, author, True, 
+                    None, None, None, None, None, 
+                    None, None, None, True]
         try:
             self.sheets_service.append_row(new_data)
             return Book(None, title, isbn, author, True)

@@ -2,6 +2,8 @@ from datetime import date
 import streamlit as st
 from services.library_service import LibraryService
 from ui.components import UIComponents
+import pandas as pd
+import plotly.express as px
 
 class Pages:
     def __init__(self):
@@ -51,6 +53,7 @@ class Pages:
         if st.session_state.role == "admin":
             # Tabs
             tabs = st.tabs([
+                "Dashboard",
                 "Tambah Buku", 
                 "Pinjam Buku", 
                 "Kembalikan Buku", 
@@ -59,12 +62,13 @@ class Pages:
                 "Hibah Buku"
             ])
 
-            self._render_add_book_tab(tabs[0])
-            self._render_borrow_book_tab(tabs[1])
-            self._render_return_book_tab(tabs[2])
-            self._render_available_books_tab(tabs[3])
-            self._render_borrowed_books_tab(tabs[4])
-            self._render_grant_book_tab(tabs[5])
+            self._render_dashboard_tab([tabs[0]])
+            self._render_add_book_tab(tabs[1])
+            self._render_borrow_book_tab(tabs[2])
+            self._render_return_book_tab(tabs[3])
+            self._render_available_books_tab(tabs[4])
+            self._render_borrowed_books_tab(tabs[5])
+            self._render_grant_book_tab(tabs[6])
 
         if st.session_state.role == "customer":
             # Tabs
@@ -79,7 +83,6 @@ class Pages:
             self._render_available_books_tab(tabs[1])
             self._render_borrowed_books_tab(tabs[2])
             self._render_grant_book_tab(tabs[3])
-
 
     def _render_add_book_tab(self, tab):
         with tab:
@@ -105,7 +108,7 @@ class Pages:
 
     def _render_grant_book_tab(self, tab):
         with tab:
-            st.header("Tambah Buku Baru")
+            st.header("Hibah Buku")
             col1, col2 = st.columns(2)
             
             with col1:
@@ -173,6 +176,38 @@ class Pages:
     def _render_available_books_tab(self, tab):
         with tab:
             st.header("Buku yang Tersedia")
+            # Book data
+            data = {
+                'Book Title': [
+                    'Si Anak Pintar', 'Si Anak Kuat', 'Si Anak Cahaya',
+                    'Si Anak Badai', 'Si Anak Pelangi', 'Si Anak Savana', 'Hafalan Shalat Delisa',
+                    'Moga Bunda Disayang Allah',
+                    'Yang Telah Lama Pergi', 'Teruslah Bodoh Jangan Pintar'
+                ],
+                'Borrow Count': [
+                    95, 88, 85, 82, 80, 58, 55, 52, 50, 48
+                ]
+            }
+
+            df = pd.DataFrame(data)
+            df = df.sort_values('Borrow Count', ascending=True)
+                
+            fig = px.bar(
+                df,
+                x='Borrow Count',
+                y='Book Title',
+                orientation='h',
+                color='Borrow Count',
+                color_continuous_scale='Viridis',
+            )
+            
+            fig.update_layout(
+                height=400,
+                xaxis_title="Top 10 Buku paling banyak dipinjam",
+                yaxis_title="Judul Buku",
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
             available_books = self.library_service.get_available_books()
             self.components.render_book_table(available_books)
 
@@ -181,7 +216,19 @@ class Pages:
             st.header("Buku yang Dipinjam")
             borrowed_books = self.library_service.get_borrowed_books()
             self.components.render_book_table(borrowed_books, include_borrower=True)
-    
+
+    def _render_dashboard_tab(self, tab):
+        with tab:
+            st.header("Dashboard Kelana Pustaka")
+            col1, col2 = st.columns(2)
+            col1.metric("Total User", "2")
+            col2.metric("Total Buku", "30")
+
+            st.markdown("---")
+
+            # st.columns(2)
+            
+
     def _welcome_tab(self, tab):
         with tab:
             st.markdown("### Petualangan Literasi Tanpa Batas")

@@ -62,7 +62,7 @@ class Pages:
                 "Hibah Buku"
             ])
 
-            self._render_dashboard_tab([tabs[0]])
+            self._render_dashboard_tab(tabs[0])
             self._render_add_book_tab(tabs[1])
             self._render_borrow_book_tab(tabs[2])
             self._render_return_book_tab(tabs[3])

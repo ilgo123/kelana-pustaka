@@ -8,21 +8,27 @@ class LibraryService:
     def __init__(self):
         self.sheets_service = GoogleSheetsService()
 
-    def add_book(self, title: str, author: str, isbn: str) -> Book:
-        new_data = [None, title, isbn, author, True]
+    def add_book(self, title: str, author: str, isbn: str, publisher: str, year_of_publication: int, pages: int, synopsis: str) -> Book:
+        new_data = [None, title, isbn, author, True, 
+                    None, None, None, synopsis, publisher, 
+                    year_of_publication, pages, 0, False, 1]
         try:
             self.sheets_service.append_row(new_data)
-            return Book(None, title, isbn, author, True)
+            return Book(None, title, isbn, author, True, 
+                    None, None, None, synopsis, publisher, 
+                    year_of_publication, pages, 0, False, 1)
         except Exception as e:
             raise Exception(f"Failed to add book: {e}")
         
-    def grant_book(self, title: str, author: str, isbn: str) -> Book:
+    def grant_book(self, title: str, author: str, isbn: str, publisher: str, year_of_publication: str, pages: str, synopsis: str) -> Book:
         new_data = [None, title, isbn, author, True, 
-                    None, None, None, None, None, 
-                    None, None, None, True]
+                    None, None, None, synopsis, publisher, 
+                    year_of_publication, pages, 0, True, 1]
         try:
             self.sheets_service.append_row(new_data)
-            return Book(None, title, isbn, author, True)
+            return Book(None, title, isbn, author, True, 
+                    None, None, None, synopsis, publisher, 
+                    year_of_publication, pages, 0, True, 1)
         except Exception as e:
             raise Exception(f"Failed to grant book: {e}")
 
@@ -58,11 +64,17 @@ class LibraryService:
             return True
         return False
 
+    def get_all_books(self) -> list[Book]:
+        records = self.sheets_service.get_all_records()
+        return [Book.from_sheet_row(record) 
+                for record in records]
+    
     def get_available_books(self) -> list[Book]:
         records = self.sheets_service.get_all_records()
         return [Book.from_sheet_row(record) 
                 for record in records 
                 if record['available'] == 'TRUE']
+
 
     def get_borrowed_books(self) -> list[Book]:
         records = self.sheets_service.get_all_records()
@@ -70,11 +82,11 @@ class LibraryService:
                 for record in records 
                 if record['available'] == 'FALSE']
     
-    def add_user_public(self, nik: str, full_name: str, birth_place: str, birth_date: date, gender: str, address: str, username: str, email: str, password: str) -> User:
-        new_data = [None, nik, full_name, birth_place, birth_date.strftime("%Y-%m-%d"), gender, address, username, email, password, "customer"]
+    def add_user_public(self, nik: str, full_name: str, birth_place: str, birth_date: date, gender: str, address: str, username: str, email: str, password: str, role: str) -> User:
+        new_data = [None, nik, full_name, birth_place, birth_date.strftime("%Y-%m-%d"), gender, address, username, email, password, role]
         try:
             self.sheets_service.add_public_user(new_data)
-            return User(None, nik, full_name, birth_place, birth_date, gender, address, username, email, password, "customer")
+            return User(None, nik, full_name, birth_place, birth_date, gender, address, username, email, password, role)
         except Exception as e:
             raise Exception(f"Failed to add user: {e}")
         
@@ -96,4 +108,9 @@ class LibraryService:
         except Exception as e:
             raise Exception(f"Failed to authenticate: {e}")
         
-        
+    def get_users(self) -> User:
+        try:
+            result = self.sheets_service.get_auth()
+            return [User.from_sheet_row(record) for record in result ]
+        except Exception as e:
+            raise Exception(f"Failed to get users: {e}")

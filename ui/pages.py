@@ -59,7 +59,8 @@ class Pages:
                 "Kembalikan Buku", 
                 "Buku yang Tersedia", 
                 "Buku yang Dipinjam",
-                "Hibah Buku"
+                "Hibah Buku",
+                "Tambah Admin"
             ])
 
             self._render_dashboard_tab(tabs[0])
@@ -69,6 +70,7 @@ class Pages:
             self._render_available_books_tab(tabs[4])
             self._render_borrowed_books_tab(tabs[5])
             self._render_grant_book_tab(tabs[6])
+            self._render_add_admin_tab(tabs[7])
 
         if st.session_state.role == "customer":
             # Tabs
@@ -90,16 +92,21 @@ class Pages:
             col1, col2 = st.columns(2)
             
             with col1:
-                title = st.text_input("Book Title")
-                author = st.text_input("Author")
+                title = st.text_input("Judul Buku")
+                author = st.text_input("Penulis")
+                publisher = st.text_input("Penerbit")
             
             with col2:
                 isbn = st.text_input("ISBN")
+                year_of_publication = st.number_input("Tahun Terbit", min_value=1900, step=1)
+                pages = st.number_input("Halaman", min_value=1, step=1)
+                
+            synopsis = st.text_area("Sinopsis")
                 
             if st.button("Add Book"):
-                if title and author and isbn:
+                if title and author and isbn and publisher and year_of_publication and pages and synopsis:
                     try:
-                        book = self.library_service.add_book(title, author, isbn)
+                        book = self.library_service.add_book(title, author, isbn, publisher, year_of_publication, pages, synopsis)
                         st.success(f"Book added successfully! Title: {book.title}")
                     except Exception as e:
                         st.error(str(e))
@@ -112,16 +119,21 @@ class Pages:
             col1, col2 = st.columns(2)
             
             with col1:
-                title = st.text_input("Book Title", key="hibah_book_title")
-                author = st.text_input("Author", key="hibah_book_author")
+                title = st.text_input("Judul Buku", key="hibah_book_title")
+                author = st.text_input("Penulis", key="hibah_book_author")
+                publisher = st.text_input("Penerbit", key="hibah_book_publisher")
             
             with col2:
                 isbn = st.text_input("ISBN", key="hibah_book_isbn")
+                year_of_publication = st.text_input("Tahun Terbit", key="hibah_book_year")
+                pages = st.text_input("Halaman", key="hibah_book_pages")
                 
+            synopsis = st.text_area("Sinopsis", key="hibah_book_synopsis")
+
             if st.button("Grant Book"):
-                if title and author and isbn:
+                if title and author and isbn and publisher and year_of_publication and pages and synopsis:
                     try:
-                        book = self.library_service.grant_book(title, author, isbn)
+                        book = self.library_service.grant_book(title, author, isbn, publisher, year_of_publication, pages, synopsis)
                         st.success(f"Book added successfully! Title: {book.title}")
                     except Exception as e:
                         st.error(str(e))
@@ -132,14 +144,92 @@ class Pages:
         with tab:
             st.header("Pinjam Buku")
             available_books = self.library_service.get_available_books()
+            books = self.library_service.get_all_books()
             
             if available_books:
+                top, below = st.columns(2)
+
+                # Corrected sorting by borrow_count in ascending order to get lowest borrow counts
+                sorted_books_low = sorted(books, key=lambda x: x.count_borrow)
+
+                # Get the bottom 10 books (lowest borrow counts)
+                bottom_10_books = sorted_books_low[:10]
+
+                # Extract the sorted titles and borrow counts
+                low_titles = [book.title for book in bottom_10_books]
+                low_counts = [book.count_borrow for book in bottom_10_books]
+
+                data_low = {
+                'Book Title': low_titles,
+                'Borrow Count': low_counts
+                }
+
+                df_low = pd.DataFrame(data_low)
+                df_low = df_low.sort_values('Borrow Count', ascending=False)
+                    
+                fig_low = px.bar(
+                    df_low,
+                    x='Borrow Count',
+                    y='Book Title',
+                    orientation='h',
+                    color='Borrow Count',
+                    color_continuous_scale='Viridis',
+                )
+                
+                fig_low.update_layout(
+                    height=400,
+                    xaxis_title="Top 10 Buku yang Paling Sedikit Dipinjam",
+                    yaxis_title="Judul Buku",
+                )
+
+                # Corrected sorting by borrow_count in ascending order to get lowest borrow counts
+                sorted_books = sorted(books, key=lambda x: x.count_borrow, reverse=True)
+
+                # Get the bottom 10 books (lowest borrow counts)
+                top_10_books = sorted_books[:10]
+
+                # Extract the sorted titles and borrow counts
+                top_titles = [book.title for book in top_10_books]
+                top_counts = [book.count_borrow for book in top_10_books]
+
+                data_low = {
+                'Book Title': top_titles,
+                'Borrow Count': top_counts
+                }
+
+                df_top = pd.DataFrame(data_low)
+                df_top = df_top.sort_values('Borrow Count', ascending=True)
+                    
+                fig_top = px.bar(
+                    df_top,
+                    x='Borrow Count',
+                    y='Book Title',
+                    orientation='h',
+                    color='Borrow Count',
+                    color_continuous_scale='Viridis',
+                )
+                
+                fig_top.update_layout(
+                    height=400,
+                    xaxis_title="Top 10 Buku paling banyak dipinjam",
+                    yaxis_title="Judul Buku",
+                )
+                
+                top.plotly_chart(fig_top, use_container_width=True)
+                below.plotly_chart(fig_low, use_container_width=True)
+
+
                 self.components.render_book_table(available_books)
                 selected_book = st.selectbox(
                     "Select Book to Borrow",
                     [book.title for book in available_books]
                 )
-                student_name = st.text_input("Student Name")
+
+                if st.session_state.role == "customer":
+                    student_name = st.text_input("Student Name", value=st.session_state.username, disabled=True)
+                
+                if st.session_state.role == "admin":
+                    student_name = st.text_input("Student Name")
                 
                 if st.button("Pinjam Buku"):
                     if student_name:
@@ -177,16 +267,20 @@ class Pages:
         with tab:
             st.header("Buku yang Tersedia")
             # Book data
+            available_books = self.library_service.get_available_books()
+            # Corrected sorting by borrow_count
+            sorted_books = sorted(available_books, key=lambda x: x.count_borrow, reverse=True)
+
+            # Get the top 10 books
+            top_10_books = sorted_books[:10]
+
+            # Extract the sorted titles and borrow counts
+            book_titles = [book.title for book in top_10_books]
+            borrow_counts = [book.count_borrow for book in top_10_books]
+
             data = {
-                'Book Title': [
-                    'Si Anak Pintar', 'Si Anak Kuat', 'Si Anak Cahaya',
-                    'Si Anak Badai', 'Si Anak Pelangi', 'Si Anak Savana', 'Hafalan Shalat Delisa',
-                    'Moga Bunda Disayang Allah',
-                    'Yang Telah Lama Pergi', 'Teruslah Bodoh Jangan Pintar'
-                ],
-                'Borrow Count': [
-                    95, 88, 85, 82, 80, 58, 55, 52, 50, 48
-                ]
+                'Book Title': book_titles,
+                'Borrow Count': borrow_counts
             }
 
             df = pd.DataFrame(data)
@@ -208,7 +302,7 @@ class Pages:
             )
             
             st.plotly_chart(fig, use_container_width=True)
-            available_books = self.library_service.get_available_books()
+            
             self.components.render_book_table(available_books)
 
     def _render_borrowed_books_tab(self, tab):
@@ -220,15 +314,17 @@ class Pages:
     def _render_dashboard_tab(self, tab):
         with tab:
             st.header("Dashboard Kelana Pustaka")
+            st.success('Hello... ' + st.session_state.username, icon="👋")
+            books = self.library_service.get_all_books()
+            users = self.library_service.get_users()
             col1, col2 = st.columns(2)
-            col1.metric("Total User", "2")
-            col2.metric("Total Buku", "30")
+            col1.metric("Total User", len(users))
+            col2.metric("Total Buku", len(books))
 
             st.markdown("---")
 
             # st.columns(2)
             
-
     def _welcome_tab(self, tab):
         with tab:
             st.markdown("### Petualangan Literasi Tanpa Batas")
@@ -426,10 +522,109 @@ class Pages:
                 st.error("Kata Sandi tidak cocok")
             else:
                 try:
-                    user = self.library_service.add_user_public(id_number, full_name, birthplace, birthdate, gender, address, username, email, password)
+                    user = self.library_service.add_user_public(id_number, full_name, birthplace, birthdate, gender, address, username, email, password, "customer")
                     st.success(f"Pendaftaran berhasil! Haloo.. {user.username}")
                     st.session_state.logged_in = True
                     st.session_state.username = username
+                    st.session_state.role = "customer"
                     st.rerun()
                 except Exception as e:
                     st.error(str(e))
+
+    def _render_add_admin_tab(self, tab):
+        with tab:
+            st.header("Tambah Admin")
+
+            # Data Pribadi
+            st.subheader("👤 Data Pribadi")
+            id_number = st.text_input("NIK", 
+                                    max_chars=16, 
+                                    placeholder="Masukkan 16 digit NIK Anda")
+            
+            full_name = st.text_input("Nama Lengkap",
+                                    placeholder="Masukkan nama lengkap Anda")
+            
+            # Tempat & Tanggal Lahir dalam satu baris
+            birth_col1, birth_col2 = st.columns(2)
+            with birth_col1:
+                birthplace = st.text_input("Tempat Lahir",
+                                        placeholder="Kota kelahiran")
+            with birth_col2:
+                min_date = date(date.today().year - 100, 1, 1)
+                max_date = date.today()
+                birthdate = st.date_input("Tanggal Lahir",
+                                        min_value=min_date,
+                                        max_value=max_date,
+                                        value=date(2000, 1, 1))
+            
+            gender = st.selectbox("Jenis Kelamin", 
+                                ["Pilih jenis kelamin", "Laki-Laki", "Perempuan"])
+            
+            address = st.text_area("Alamat",
+                                placeholder="Masukkan alamat lengkap Anda",
+                                height=100)
+            
+            st.markdown("---")
+            
+            # Data Akun
+            st.subheader("🔐 Data Akun")
+            
+            # Username & Email dalam satu baris
+            user_col1, user_col2 = st.columns(2)
+            with user_col1:
+                username = st.text_input("Username",
+                                    placeholder="Masukkan username")
+            with user_col2:
+                email = st.text_input("Email",
+                                    placeholder="contoh@email.com")
+            
+            # Password & Konfirmasi dalam satu baris
+            pass_col1, pass_col2 = st.columns(2)
+            with pass_col1:
+                password = st.text_input("Kata Sandi",
+                                    type="password",
+                                    placeholder="Minimal 6 karakter")
+            with pass_col2:
+                confirm_password = st.text_input("Konfirmasi Kata Sandi",
+                                            type="password",
+                                            placeholder="Ulangi kata sandi")
+            
+            # Validasi password real-time
+            if confirm_password:
+                if password != confirm_password:
+                    st.error("❌ Kata Sandi tidak cocok")
+                elif len(confirm_password) < 6:
+                    st.warning("⚠️ Kata Sandi harus lebih dari 6 karakter")
+                else:
+                    st.success("✅ Kata Sandi cocok!")
+            
+            submit_button = st.button("Daftar")
+            
+            if submit_button:
+                # Validasi form
+                if not id_number:
+                    st.error("NIK diperlukan")
+                elif len(id_number) != 16 or not id_number.isdigit():
+                    st.error("NIK harus terdiri dari 16 digit")
+                elif not full_name:
+                    st.error("Nama Lengkap diperlukan")
+                elif not birthplace:
+                    st.error("Tempat Lahir diperlukan")
+                elif gender == "Pilih jenis kelamin":
+                    st.error("Jenis Kelamin diperlukan")
+                elif not address:
+                    st.error("Alamat diperlukan")
+                elif not username:
+                    st.error("Username diperlukan")
+                elif not email or '@' not in email or '.' not in email:
+                    st.error("Silakan masukkan alamat email yang valid")
+                elif not password or len(password) < 6:
+                    st.error("Kata Sandi harus lebih dari 6 karakter")
+                elif password != confirm_password:
+                    st.error("Kata Sandi tidak cocok")
+                else:
+                    try:
+                        user = self.library_service.add_user_public(id_number, full_name, birthplace, birthdate, gender, address, username, email, password, "admin")
+                        st.success(f"Pendaftaran berhasil! Haloo.. {user.username}")
+                    except Exception as e:
+                        st.error(str(e))

@@ -9,16 +9,16 @@ def main():
     )
 
     if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
+        st.session_state.logged_in = True
 
     if 'username' not in st.session_state:
-        st.session_state.username = ""
+        st.session_state.username = "ilgo"
     
     if 'current_page' not in st.session_state:
         st.session_state.current_page = ""
         
     if 'role' not in st.session_state:
-        st.session_state.role = ""
+        st.session_state.role = "admin"
 
     pages = Pages()
     
